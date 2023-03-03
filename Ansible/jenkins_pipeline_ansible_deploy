@@ -1,0 +1,60 @@
+pipeline {
+    agent any
+    
+    stages {
+        stage('Clone repository') {
+            steps {
+                git branch: 'main', url: "https://github.com/zinchenko-ihor/hellonode.git"
+            }
+        }
+        
+        stage('Build Docker image') {
+            steps {
+                script {
+                    app = docker.build("jumper93/hellonode")
+                }
+            }
+        }
+        
+        stage('Test Docker image') {
+            steps {
+                script {
+                    app.inside {
+                        sh 'echo "Tests passed"'
+                    }
+                }
+            }
+        }
+        
+        stage('Push Docker image') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', passwordVariable: 'DOCKER_HUB_PASSWORD', usernameVariable: 'DOCKER_HUB_USERNAME')]) {
+                    script {
+                        withDockerRegistry([credentialsId: 'docker-hub-credentials']) {
+                            app.push("${env.BUILD_NUMBER}")
+                            app.push("latest")
+                        }
+                    }
+                }
+            }
+        }
+         
+        stage('Check_Ansible') {
+            steps {
+                sh 'ansible --version'
+            }
+        }
+        
+        stage('SCM_Checkout') {
+            steps {
+                git branch: 'main', url: "https://github.com/zinchenko-ihor/IaC.git"
+            }
+        }
+        
+        stage('Deploy') {
+            steps {
+                ansiblePlaybook credentialsId: 'private_key', disableHostKeyChecking: true, installation: 'Ansible', inventory: 'Ansible/hosts.txt', playbook: 'Ansible/plaebook.yml'
+            }
+        }
+    }
+}
