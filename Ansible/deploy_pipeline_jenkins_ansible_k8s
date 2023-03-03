@@ -3,7 +3,7 @@ pipeline {
     
     environment {
         DOCKER_REGISTRY = "hub.docker.com"
-        DOCKER_IMAGE = "hellonode"
+        DOCKER_IMAGE = "jumper93/hellonode"
         DOCKER_TAG = "latest"
         KUBECONFIG = credentials('kubeconfig-credentials')
     }
@@ -11,7 +11,7 @@ pipeline {
     stages {
         stage('Clone repository') {
             steps {
-                checkout scm
+                git branch: 'main', url: "https://github.com/zinchenko-ihor/hellonode.git"
             }
         }
         
