@@ -1,0 +1,61 @@
+pipeline {
+    agent any
+    
+    environment {
+        DOCKER_REGISTRY = "hub.docker.com"
+        DOCKER_IMAGE = "hellonode"
+        DOCKER_TAG = "latest"
+        KUBECONFIG = credentials('kubeconfig-credentials')
+    }
+    
+    stages {
+        stage('Clone repository') {
+            steps {
+                checkout scm
+            }
+        }
+        
+        stage('Build and push Docker image') {
+            steps {
+                script {
+                    def dockerImage = "${DOCKER_REGISTRY}/${DOCKER_IMAGE}:${DOCKER_TAG}"
+                    docker.build(dockerImage).push()
+                }
+            }
+        }
+        
+        stage('Test Docker image') {
+            steps {
+                script {
+                    def dockerImage = "${DOCKER_REGISTRY}/${DOCKER_IMAGE}:${DOCKER_TAG}"
+                    docker.withRegistry("${DOCKER_REGISTRY}", "docker-hub-credentials") {
+                        docker.image(dockerImage).inside {
+                            sh 'npm install && npm test'
+                        }
+                    }
+                }
+            }
+        }
+        
+        stage('Deploy to Kubernetes') {
+            steps {
+                script {
+                    def kubeconfigPath = writeKubeconfigToFile(KUBECONFIG)
+                    ansiblePlaybook credentialsId: 'private_key', disableHostKeyChecking: true, installation: 'Ansible', inventory: 'Ansible/hosts.txt', playbook: 'Ansible/playbook.yml', extraVars: [
+                        docker_registry: DOCKER_REGISTRY,
+                        docker_image: DOCKER_IMAGE,
+                        docker_tag: DOCKER_TAG,
+                        kubeconfig_path: kubeconfigPath
+                    ]
+                }
+            }
+        }
+    }
+}
+
+def writeKubeconfigToFile(kubeconfig) {
+    def kubeconfigFile = File.createTempFile('kubeconfig', '.yaml')
+    kubeconfigFile.write(kubeconfig)
+    kubeconfigFile.setReadable(true, false)
+    kubeconfigFile.getAbsolutePath()
+}
