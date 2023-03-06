@@ -15,7 +15,7 @@
       ec2_key:
         name: hellonode_key
         key_material: "{{ item }}"
-        region: "us-east-1"
+        region: "eu-central-1"
       with_file: ./hellonode_key.pub
 
     - name: Ensure security group exists
@@ -54,7 +54,7 @@
              #!/bin/sh
              sudo apt-get -y update
              sudo apt-get -y --force-yes install python python-pip
-        region: "us-east-1"
+        region: "eu-central-1"
       register: ec2
 
     - name: Add instance public IP to host group
