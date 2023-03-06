@@ -36,7 +36,7 @@
             from_port: -1
             to_port: -1
             cidr_ip: 0.0.0.0/0
-        region: "us-east-1"
+        region: "eu-central-1"
 
     - name: Ensure {{ server_count }} server(s) are running
       ec2:
